@@ -7,6 +7,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import com.fasterxml.jackson.databind.deser.std.NullifyingDeserializer;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import scala.Tuple2;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -48,14 +50,14 @@ public class CryptoStream {
         String topics = "cryptocurrency-nifi-data";
 
         // Create context with a 2 seconds batch interval
-        SparkConf sparkConf = new SparkConf().setAppName("CryptoStream");
+        SparkConf sparkConf = new SparkConf().setAppName("CryptoStream").setMaster("local[2]");
         JavaStreamingContext jssc = new JavaStreamingContext(sparkConf, Durations.seconds(2));
 
         //Setting kafka topics and brokers
-        Set<String> topicsSet = new HashSet<>(Arrays.asList(topics.split(",")));
+        Set<String> topicsSet = new HashSet<>(Arrays.asList(topics));
         Map<String, Object> kafkaParams = new HashMap<>();
         kafkaParams.put("bootstrap.servers",brokers);
-        kafkaParams.put("key.deserializer", StringDeserializer.class);
+        kafkaParams.put("key.deserializer", ByteArrayDeserializer.class);
         kafkaParams.put("value.deserializer", StringDeserializer.class);
         kafkaParams.put("group.id", "ID-1");
         kafkaParams.put("auto.offset.reset", "latest");
@@ -68,7 +70,30 @@ public class CryptoStream {
                 ConsumerStrategies.<String,String>Subscribe(topicsSet, kafkaParams));
 
         //Print Messages to console for now
-        messages.print();
+        JavaDStream<String> lines = messages.map(ConsumerRecord::value);
+        lines.print();
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        //JSON from file to Object
+        User user = mapper.readValue(new File("c:\\user.json"), User.class);
+
+        //JSON from String to Object
+        User user = mapper.readValue(jsonInString, User.class);
+
+        // Convert RDD[String] to RDD[case class] to DataFrame
+        JavaRDD<JavaRow> rowRDD = lines.map(word -> {
+            JavaRow record = new JavaRow();
+            record.getExchange();
+            return record;
+        });
+
+        DataFrame wordsDataFrame = spark.createDataFrame(rowRDD, JavaRow.class);
+
+        // Creates a temporary view using the DataFrame
+        wordsDataFrame.createOrReplaceTempView("words");
+
+
 
 //        // Get the lines, split them into words, count the words and print
 //        JavaDStream<String> lines = messages.map(ConsumerRecord::value);
