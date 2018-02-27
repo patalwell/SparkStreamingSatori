@@ -1,18 +1,29 @@
 package com.palwell;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Arrays;
-import java.util.Map;
-import java.util.Set;
+import java.sql.Date;
+import java.text.DateFormat;
+import java.util.*;
 import java.util.regex.Pattern;
+
+import org.apache.spark.*;
+import org.apache.spark.api.java.function.*;
+import org.apache.spark.streaming.*;
+import org.apache.spark.streaming.api.java.*;
 
 import com.fasterxml.jackson.databind.deser.std.NullifyingDeserializer;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+import org.apache.spark.sql.*;
 import scala.Tuple2;
 
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.function.Function;
+import org.apache.spark.SparkConf;
 import org.apache.spark.SparkConf;
 import org.apache.spark.streaming.api.java.*;
 import org.apache.spark.streaming.kafka010.ConsumerStrategies;
@@ -20,6 +31,8 @@ import org.apache.spark.streaming.kafka010.KafkaUtils;
 import org.apache.spark.streaming.kafka010.LocationStrategies;
 import org.apache.spark.streaming.Durations;
 import org.apache.kafka.common.serialization.StringDeserializer;
+
+import javax.swing.*;
 
 /**
  * Consumes messages from one or more topics in Kafka and does wordcount.
@@ -56,7 +69,7 @@ public class CryptoStream {
         //Setting kafka topics and brokers
         Set<String> topicsSet = new HashSet<>(Arrays.asList(topics));
         Map<String, Object> kafkaParams = new HashMap<>();
-        kafkaParams.put("bootstrap.servers",brokers);
+        kafkaParams.put("bootstrap.servers", brokers);
         kafkaParams.put("key.deserializer", ByteArrayDeserializer.class);
         kafkaParams.put("value.deserializer", StringDeserializer.class);
         kafkaParams.put("group.id", "ID-1");
@@ -67,40 +80,46 @@ public class CryptoStream {
         JavaInputDStream<ConsumerRecord<String, String>> messages = KafkaUtils.createDirectStream(
                 jssc,
                 LocationStrategies.PreferConsistent(),
-                ConsumerStrategies.<String,String>Subscribe(topicsSet, kafkaParams));
+                ConsumerStrategies.<String, String>Subscribe(topicsSet, kafkaParams));
 
         //Print Messages to console for now
         JavaDStream<String> lines = messages.map(ConsumerRecord::value);
         lines.print();
 
-        ObjectMapper mapper = new ObjectMapper();
 
-        //JSON from file to Object
-        User user = mapper.readValue(new File("c:\\user.json"), User.class);
+        lines.foreachRDD(rdd, time ) --> {
+            SparkSession spark = SparkSession.builder().config(rdd.sparkConetxt().getConf()).getOrCreate();
 
-        //JSON from String to Object
-        User user = mapper.readValue(jsonInString, User.class);
 
         // Convert RDD[String] to RDD[case class] to DataFrame
-        JavaRDD<JavaRow> rowRDD = lines.map(word -> {
+        JavaRDD<JavaRow> rowRDD = rdd.map(line -> {
+            String [] fields = line.split(",");
             JavaRow record = new JavaRow();
-            record.getExchange();
+            record.setExchange(fields[0]);
+            record.setCryptocurrency(fields[1]);
+            record.setBasecurrency(fields[2]);
+            record.setType(fields[3]);
+            record.setPrice(Double.parseDouble(fields[4].trim()));
+            record.setSize(fields[5]);
+            record.setBid(Double.parseDouble(fields[6].trim()));
+            record.setAsk(Double.parseDouble(fields[7].trim()));
+            record.setOpen(Double.parseDouble(fields[8].trim()));
+            record.setHigh(Double.parseDouble(fields[9].trim()));
+            record.setLow(Double.parseDouble(fields[10].trim()));
+            record.setVolume(Double.parseDouble(fields[11].trim()));
+            record.setTimestamp(Date.valueOf(fields[12].trim()));
             return record;
         });
 
-        DataFrame wordsDataFrame = spark.createDataFrame(rowRDD, JavaRow.class);
+        Datset<Row> wordsDataFrame = spark.createDataFrame(rowRDD, JavaRow.class);
 
         // Creates a temporary view using the DataFrame
-        wordsDataFrame.createOrReplaceTempView("words");
+        wordsDataFrame.createOrReplaceTempView("crypto");
 
-
-
-//        // Get the lines, split them into words, count the words and print
-//        JavaDStream<String> lines = messages.map(ConsumerRecord::value);
-//        JavaDStream<String> words = lines.flatMap(x -> Arrays.asList(SPACE.split(x)).iterator());
-//        JavaPairDStream<String, Integer> wordCounts = words.mapToPair(s -> new Tuple2<>(s, 1))
-//                .reduceByKey((i1, i2) -> i1 + i2);
-//        wordCounts.print();
+        DataFrame wordCountsDataFrame =
+                spark.sql("select count(cryptocurrency) from crypto group by exchange limit 5");
+        wordCountsDataFrame.show();
+    }
 
         // Start the computation
         jssc.start();

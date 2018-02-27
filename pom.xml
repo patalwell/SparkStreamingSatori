@@ -57,6 +57,7 @@
             <version>2.9.4</version>
         </dependency>
 
+        <!--we may not need this -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-annotations</artifactId>
