@@ -1,28 +1,27 @@
 package com.palwell;
 
-import scala.Int;
 
-import java.util.Date;
+import java.sql.Date;
 
 public class JavaRow implements java.io.Serializable {
-    @Override
-    public String toString() {
-        return "JavaRow{" +
-                "exchange='" + exchange + '\'' +
-                ", cryptocurrency='" + cryptocurrency + '\'' +
-                ", basecurrency='" + basecurrency + '\'' +
-                ", type='" + type + '\'' +
-                ", price=" + price +
-                ", size='" + size + '\'' +
-                ", bid=" + bid +
-                ", ask=" + ask +
-                ", open=" + open +
-                ", high=" + high +
-                ", low=" + low +
-                ", volume=" + volume +
-                ", timestamp=" + timestamp +
-                '}';
-    }
+//    @Override
+//    public String toString() {
+//        return "JavaRow{" +
+//                "exchange='" + exchange + '\'' +
+//                ", cryptocurrency='" + cryptocurrency + '\'' +
+//                ", basecurrency='" + basecurrency + '\'' +
+//                ", type='" + type + '\'' +
+//                ", price=" + price +
+//                ", size='" + size + '\'' +
+//                ", bid=" + bid +
+//                ", ask=" + ask +
+//                ", open=" + open +
+//                ", high=" + high +
+//                ", low=" + low +
+//                ", volume=" + volume +
+//                ", timestamp=" + timestamp +
+//                '}';
+//    }
     private String exchange;
     private String cryptocurrency;
     private String basecurrency;
@@ -35,7 +34,7 @@ public class JavaRow implements java.io.Serializable {
     private Double high;
     private Double low;
     private Double volume;
-    private Date timestamp;
+    private java.sql.Date timestamp;
 
     public String getExchange() {
         return exchange;
@@ -85,7 +84,7 @@ public class JavaRow implements java.io.Serializable {
         return volume;
     }
 
-    public Date getTimestamp() {
+    public java.sql.Date getTimestamp() {
         return timestamp;
     }
 
@@ -137,7 +136,7 @@ public class JavaRow implements java.io.Serializable {
         this.volume = volume;
     }
 
-    public void setTimestamp(Date timestamp) {
+    public void setTimestamp(java.sql.Date timestamp) {
         this.timestamp = timestamp;
     }
 }

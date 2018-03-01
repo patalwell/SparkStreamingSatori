@@ -4,13 +4,17 @@ import java.sql.Date;
 import java.text.DateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.sql.Dataset;
+import org.apache.spark.sql.Row;
+
 
 import org.apache.spark.*;
 import org.apache.spark.api.java.function.*;
 import org.apache.spark.streaming.*;
 import org.apache.spark.streaming.api.java.*;
 
-import com.fasterxml.jackson.databind.deser.std.NullifyingDeserializer;
+
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.sql.Dataset;
@@ -77,49 +81,61 @@ public class CryptoStream {
         kafkaParams.put("enable.auto.commit", false);
 
         // Create direct kafka stream with brokers and topics
-        JavaInputDStream<ConsumerRecord<String, String>> messages = KafkaUtils.createDirectStream(
+        JavaInputDStream<ConsumerRecord<String, String>> kafka_messages = KafkaUtils.createDirectStream(
                 jssc,
                 LocationStrategies.PreferConsistent(),
                 ConsumerStrategies.<String, String>Subscribe(topicsSet, kafkaParams));
 
-        //Print Messages to console for now
-        JavaDStream<String> lines = messages.map(ConsumerRecord::value);
-        lines.print();
+        kafka_messages.foreachRDD(rdd ->
+        {
+            // Get the singleton instance of SparkSession
+            SparkSession spark = SparkSession
+                    .builder()
+                    .getOrCreate();
 
-
-        lines.foreachRDD(rdd, time ) --> {
-            SparkSession spark = SparkSession.builder().config(rdd.sparkConetxt().getConf()).getOrCreate();
-
-
-        // Convert RDD[String] to RDD[case class] to DataFrame
-        JavaRDD<JavaRow> rowRDD = rdd.map(line -> {
-            String [] fields = line.split(",");
-            JavaRow record = new JavaRow();
-            record.setExchange(fields[0]);
-            record.setCryptocurrency(fields[1]);
-            record.setBasecurrency(fields[2]);
-            record.setType(fields[3]);
-            record.setPrice(Double.parseDouble(fields[4].trim()));
-            record.setSize(fields[5]);
-            record.setBid(Double.parseDouble(fields[6].trim()));
-            record.setAsk(Double.parseDouble(fields[7].trim()));
-            record.setOpen(Double.parseDouble(fields[8].trim()));
-            record.setHigh(Double.parseDouble(fields[9].trim()));
-            record.setLow(Double.parseDouble(fields[10].trim()));
-            record.setVolume(Double.parseDouble(fields[11].trim()));
-            record.setTimestamp(Date.valueOf(fields[12].trim()));
-            return record;
+            // Convert RDD[String] to RDD[case class] to DataFrame
+            Dataset<Row> satoriDF= spark.createDataFrame(rdd,JavaRow.class);
+            satoriDF.createOrReplaceTempView("CryptoStream");
+            
+            Dataset<Row> final_df =
+                    spark.sql("Select cryptocurrency, exchange from CryptoStream limit 5");
+            final_df.show();
         });
 
-        Datset<Row> wordsDataFrame = spark.createDataFrame(rowRDD, JavaRow.class);
 
-        // Creates a temporary view using the DataFrame
-        wordsDataFrame.createOrReplaceTempView("crypto");
-
-        DataFrame wordCountsDataFrame =
-                spark.sql("select count(cryptocurrency) from crypto group by exchange limit 5");
-        wordCountsDataFrame.show();
-    }
+//        lines.foreachRDD(rdd, time ) --> {
+//            SparkSession spark = SparkSession.builder().config(rdd.sparkConetxt().getConf()).getOrCreate();
+//
+//
+//        // Convert RDD[String] to RDD[case class] to DataFrame
+//        JavaRDD<JavaRow> rowRDD = rdd.map(line -> {
+//            String [] fields = line.split(",");
+//            JavaRow record = new JavaRow();
+//            record.setExchange(fields[0]);
+//            record.setCryptocurrency(fields[1]);
+//            record.setBasecurrency(fields[2]);
+//            record.setType(fields[3]);
+//            record.setPrice(Double.parseDouble(fields[4].trim()));
+//            record.setSize(fields[5]);
+//            record.setBid(Double.parseDouble(fields[6].trim()));
+//            record.setAsk(Double.parseDouble(fields[7].trim()));
+//            record.setOpen(Double.parseDouble(fields[8].trim()));
+//            record.setHigh(Double.parseDouble(fields[9].trim()));
+//            record.setLow(Double.parseDouble(fields[10].trim()));
+//            record.setVolume(Double.parseDouble(fields[11].trim()));
+//            record.setTimestamp(Date.valueOf(fields[12].trim()));
+//            return record;
+//        });
+//
+//        Datset<Row> wordsDataFrame = spark.createDataFrame(rowRDD, JavaRow.class);
+//
+//        // Creates a temporary view using the DataFrame
+//        wordsDataFrame.createOrReplaceTempView("crypto");
+//
+//        DataFrame wordCountsDataFrame =
+//                spark.sql("select count(cryptocurrency) from crypto group by exchange limit 5");
+//        wordCountsDataFrame.show();
+//    }
 
         // Start the computation
         jssc.start();
