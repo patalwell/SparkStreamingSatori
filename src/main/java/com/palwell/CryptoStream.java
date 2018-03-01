@@ -50,30 +50,22 @@ import javax.swing.*;
  */
 
 public class CryptoStream {
-//    private static final Pattern SPACE = Pattern.compile(" ");
 
-//    public static void main(String[] args) throws Exception {
-//        if (args.length < 2) {
-//            System.err.println("Usage: JavaDirectKafkaWordCount <brokers> <topics>\n" +
-//                    "  <brokers> is a list of one or more Kafka brokers\n" +
-//                    "  <topics> is a list of one or more kafka topics to consume from\n\n");
-//            System.exit(1);
-//        }
+    //Kafka Parameters
+    private static final String BROKERS = "pathdp3.field.hortonworks.com:6667";
+    private static String TOPICS = "cryptocurrency-nifi-data";
+    private static String APP_NAME = "CryptoStream";
 
-    public static void main(String[] args) throws Exception {
-
-        //Kafka Parameters
-        String brokers = "pathdp3.field.hortonworks.com:6667";
-        String topics = "cryptocurrency-nifi-data";
+    private void startStream() throws Exception {
 
         // Create context with a 2 seconds batch interval
-        SparkConf sparkConf = new SparkConf().setAppName("CryptoStream").setMaster("local[2]");
+        SparkConf sparkConf = new SparkConf().setAppName(APP_NAME).setMaster("local[2]");
         JavaStreamingContext jssc = new JavaStreamingContext(sparkConf, Durations.seconds(2));
 
         //Setting kafka topics and brokers
-        Set<String> topicsSet = new HashSet<>(Arrays.asList(topics));
+        Set<String> topicsSet = new HashSet<>(Arrays.asList(TOPICS));
         Map<String, Object> kafkaParams = new HashMap<>();
-        kafkaParams.put("bootstrap.servers", brokers);
+        kafkaParams.put("bootstrap.servers", BROKERS);
         kafkaParams.put("key.deserializer", ByteArrayDeserializer.class);
         kafkaParams.put("value.deserializer", StringDeserializer.class);
         kafkaParams.put("group.id", "ID-1");
@@ -96,49 +88,18 @@ public class CryptoStream {
             // Convert RDD[String] to RDD[case class] to DataFrame
             Dataset<Row> satoriDF= spark.createDataFrame(rdd,JavaRow.class);
             satoriDF.createOrReplaceTempView("CryptoStream");
-            
+
             Dataset<Row> final_df =
                     spark.sql("Select cryptocurrency, exchange from CryptoStream limit 5");
             final_df.show();
         });
 
-
-//        lines.foreachRDD(rdd, time ) --> {
-//            SparkSession spark = SparkSession.builder().config(rdd.sparkConetxt().getConf()).getOrCreate();
-//
-//
-//        // Convert RDD[String] to RDD[case class] to DataFrame
-//        JavaRDD<JavaRow> rowRDD = rdd.map(line -> {
-//            String [] fields = line.split(",");
-//            JavaRow record = new JavaRow();
-//            record.setExchange(fields[0]);
-//            record.setCryptocurrency(fields[1]);
-//            record.setBasecurrency(fields[2]);
-//            record.setType(fields[3]);
-//            record.setPrice(Double.parseDouble(fields[4].trim()));
-//            record.setSize(fields[5]);
-//            record.setBid(Double.parseDouble(fields[6].trim()));
-//            record.setAsk(Double.parseDouble(fields[7].trim()));
-//            record.setOpen(Double.parseDouble(fields[8].trim()));
-//            record.setHigh(Double.parseDouble(fields[9].trim()));
-//            record.setLow(Double.parseDouble(fields[10].trim()));
-//            record.setVolume(Double.parseDouble(fields[11].trim()));
-//            record.setTimestamp(Date.valueOf(fields[12].trim()));
-//            return record;
-//        });
-//
-//        Datset<Row> wordsDataFrame = spark.createDataFrame(rowRDD, JavaRow.class);
-//
-//        // Creates a temporary view using the DataFrame
-//        wordsDataFrame.createOrReplaceTempView("crypto");
-//
-//        DataFrame wordCountsDataFrame =
-//                spark.sql("select count(cryptocurrency) from crypto group by exchange limit 5");
-//        wordCountsDataFrame.show();
-//    }
-
         // Start the computation
         jssc.start();
         jssc.awaitTermination();
+    }
+
+    public static void main(String[] args) throws Exception {
+        new CryptoStream().startStream();
     }
 }
