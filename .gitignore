@@ -3,3 +3,5 @@ target/
 *.iml
 *spark-warehouse/
 *target/
+*.DS_Store
+*/.DS_Store
