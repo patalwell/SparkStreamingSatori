@@ -1,34 +1,14 @@
 package com.palwell;
 
+public class PayloadSchema implements java.io.Serializable {
 
-import java.sql.Date;
-
-public class JavaRow implements java.io.Serializable {
-//    @Override
-//    public String toString() {
-//        return "JavaRow{" +
-//                "exchange='" + exchange + '\'' +
-//                ", cryptocurrency='" + cryptocurrency + '\'' +
-//                ", basecurrency='" + basecurrency + '\'' +
-//                ", type='" + type + '\'' +
-//                ", price=" + price +
-//                ", size='" + size + '\'' +
-//                ", bid=" + bid +
-//                ", ask=" + ask +
-//                ", open=" + open +
-//                ", high=" + high +
-//                ", low=" + low +
-//                ", volume=" + volume +
-//                ", timestamp=" + timestamp +
-//                '}';
-//    }
     private String exchange;
     private String cryptocurrency;
     private String basecurrency;
     private String type;
     private Double price;
     private String size;
-    private Double bid;
+    private int bid;
     private Double ask;
     private Double open;
     private Double high;
@@ -60,7 +40,7 @@ public class JavaRow implements java.io.Serializable {
         return size;
     }
 
-    public Double getBid() {
+    public int getBid() {
         return bid;
     }
 
@@ -112,7 +92,7 @@ public class JavaRow implements java.io.Serializable {
         this.size = size;
     }
 
-    public void setBid(Double bid) {
+    public void setBid(int bid) {
         this.bid = bid;
     }
 
