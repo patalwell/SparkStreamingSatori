@@ -14,6 +14,7 @@ while the latter is using the Spark Streaming API.
 
 <h3>Sample Results:</h3>
 
+```bash
 +--------------+-----------------+---------+---------+
 |cryptocurrency|    average_price|max_price|min_price|
 +--------------+-----------------+---------+---------+
@@ -21,3 +22,4 @@ while the latter is using the Spark Streaming API.
 |           ETH|697.9666666666666|   704.82|   693.71|
 |           LTC|           137.97|    138.1|   137.84|
 +--------------+-----------------+---------+---------+
+```
